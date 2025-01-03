@@ -1,0 +1,62 @@
+{
+  "name": "local-chat",
+  "private": true,
+  "version": "1.0.0",
+  "description": "局域网聊天室 - 简单易用的局域网即时通讯工具",
+  "author": {
+    "name": "LocalChat Team"
+  },
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "vite build",
+    "electron": "electron .",
+    "package": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.localchat.app",
+    "productName": "局域网聊天室",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "electron/icon.ico"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "electron",
+        "to": "electron",
+        "filter": [
+          "icon.ico",
+          "config.html"
+        ]
+      }
+    ],
+    "asar": false
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "4.2.1",
+    "autoprefixer": "10.4.16",
+    "express": "4.18.2",
+    "express-fileupload": "1.4.3",
+    "postcss": "8.4.32",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "socket.io": "4.7.2",
+    "socket.io-client": "4.7.2",
+    "tailwindcss": "3.4.0"
+  },
+  "devDependencies": {
+    "electron": "25.9.8",
+    "electron-builder": "24.13.3",
+    "electron-builder-squirrel-windows": "24.13.3",
+    "vite": "5.0.10"
+  }
+}

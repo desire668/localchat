@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark:bg-gray-900">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>局域网聊天室</title>
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js" type="module"></script>
+    <style>
+      emoji-picker {
+        width: 352px;
+        height: 435px;
+      }
+      .dark emoji-picker {
+        --background: #1f2937;
+        --border-color: #374151;
+        --indicator-color: #3b82f6;
+        --input-border-color: #4b5563;
+        --input-font-color: #e5e7eb;
+        --input-placeholder-color: #9ca3af;
+        --outline-color: #3b82f6;
+        --category-font-color: #e5e7eb;
+        --button-hover-background: #374151;
+        --button-active-background: #4b5563;
+      }
+    </style>
+    <script>
+      // 检查系统主题和本地存储
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
