@@ -2,30 +2,65 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageList } from './MessageList';
 import { UserList } from './UserList';
 import { ThemeToggle } from './ThemeToggle';
+import { FileManager } from './FileManager';
 
 export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
   const [newMessage, setNewMessage] = useState('');
   const fileInputRef = useRef();
   const [isUploading, setIsUploading] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showFileManager, setShowFileManager] = useState(false);
   const emojiButtonRef = useRef(null);
   const emojiPickerRef = useRef(null);
+  const emojiContainerRef = useRef(null);
 
   useEffect(() => {
-    if (showEmoji && !emojiPickerRef.current) {
-      const container = document.querySelector('.emoji-picker-container');
+    // 创建 emoji 选择器
+    const createEmojiPicker = () => {
+      const picker = document.createElement('emoji-picker');
+      picker.addEventListener('emoji-click', event => {
+        setNewMessage(prev => prev + event.detail.unicode);
+        setShowEmoji(false);
+      });
+      return picker;
+    };
+
+    // 处理 emoji 选择器的显示和隐藏
+    if (showEmoji) {
+      const container = emojiContainerRef.current;
       if (container) {
+        if (!emojiPickerRef.current) {
+          emojiPickerRef.current = createEmojiPicker();
+        }
         container.innerHTML = '';
-        const picker = document.createElement('emoji-picker');
-        picker.addEventListener('emoji-click', event => {
-          setNewMessage(prev => prev + event.detail.unicode);
-          setShowEmoji(false);
-        });
-        container.appendChild(picker);
-        emojiPickerRef.current = picker;
+        container.appendChild(emojiPickerRef.current);
       }
     }
   }, [showEmoji]);
+
+  // 点击其他地方关闭emoji选择器
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showEmoji && 
+          !event.target.closest('.emoji-picker-container') && 
+          event.target !== emojiButtonRef.current) {
+        setShowEmoji(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmoji]);
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      if (emojiPickerRef.current) {
+        emojiPickerRef.current.remove();
+        emojiPickerRef.current = null;
+      }
+    };
+  }, []);
 
   const sendMessage = (e) => {
     e.preventDefault();
@@ -64,20 +99,6 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
       setIsUploading(false);
     }
   };
-
-  // 点击其他地方关闭emoji选择器
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showEmoji && 
-          !event.target.closest('.emoji-picker-container') && 
-          event.target !== emojiButtonRef.current) {
-        setShowEmoji(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showEmoji]);
 
   return (
     <div className="h-screen flex bg-gray-100 dark:bg-gray-900">
@@ -130,8 +151,17 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
       {/* 右侧聊天区域 */}
       <div className="flex-1 flex flex-col bg-white dark:bg-gray-800">
         {/* 聊天区域标题 */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h2 className="text-lg font-medium text-gray-800 dark:text-gray-200">聊天室</h2>
+          <button
+            onClick={() => setShowFileManager(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+            <span>群文件</span>
+          </button>
         </div>
 
         {/* 消息列表 */}
@@ -162,8 +192,10 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
                 </svg>
               </button>
               {showEmoji && (
-                <div className="absolute bottom-full right-0 mb-2 emoji-picker-container z-50 shadow-xl rounded-lg overflow-hidden">
-                </div>
+                <div 
+                  ref={emojiContainerRef}
+                  className="absolute bottom-full right-0 mb-2 emoji-picker-container z-50 shadow-xl rounded-lg overflow-hidden"
+                />
               )}
             </div>
             <input
@@ -190,6 +222,12 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
           </div>
         </form>
       </div>
+
+      {/* 文件管理器 */}
+      <FileManager
+        isOpen={showFileManager}
+        onClose={() => setShowFileManager(false)}
+      />
     </div>
   );
 }
