@@ -4,23 +4,39 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>局域网聊天室</title>
-    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js" type="module"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.18.3/index.js"></script>
     <style>
       emoji-picker {
-        width: 352px;
-        height: 435px;
+        --background: var(--background-color);
+        --border-color: var(--border-color);
+        --indicator-color: var(--accent-color);
+        --input-border-color: var(--border-color);
+        --input-font-color: var(--text-color);
+        --input-placeholder-color: var(--text-secondary-color);
+        --outline-color: var(--accent-color);
+        --category-font-color: var(--text-secondary-color);
+        --button-hover-background: var(--background-color-hover);
+        --button-active-background: var(--background-color-active);
       }
+
       .dark emoji-picker {
-        --background: #1f2937;
+        --background-color: #1f2937;
         --border-color: #374151;
-        --indicator-color: #3b82f6;
-        --input-border-color: #4b5563;
-        --input-font-color: #e5e7eb;
-        --input-placeholder-color: #9ca3af;
-        --outline-color: #3b82f6;
-        --category-font-color: #e5e7eb;
-        --button-hover-background: #374151;
-        --button-active-background: #4b5563;
+        --text-color: #e5e7eb;
+        --text-secondary-color: #9ca3af;
+        --accent-color: #3b82f6;
+        --background-color-hover: #374151;
+        --background-color-active: #4b5563;
+      }
+
+      emoji-picker {
+        --background-color: #ffffff;
+        --border-color: #e5e7eb;
+        --text-color: #1f2937;
+        --text-secondary-color: #6b7280;
+        --accent-color: #3b82f6;
+        --background-color-hover: #f3f4f6;
+        --background-color-active: #e5e7eb;
       }
     </style>
     <script>
@@ -31,8 +47,8 @@
         document.documentElement.classList.remove('dark')
       }
     </script>
-    <script type="module" crossorigin src="/assets/index-C7vq87BS.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-CV5Wi63S.css">
+    <script type="module" crossorigin src="/assets/index-yYWJN_L2.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C3xjBr4S.css">
   </head>
   <body>
     <div id="root"></div>

@@ -15,22 +15,15 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
   const emojiContainerRef = useRef(null);
 
   useEffect(() => {
-    // 创建 emoji 选择器
-    const createEmojiPicker = () => {
-      const picker = document.createElement('emoji-picker');
-      picker.addEventListener('emoji-click', event => {
-        setNewMessage(prev => prev + event.detail.unicode);
-        setShowEmoji(false);
-      });
-      return picker;
-    };
-
-    // 处理 emoji 选择器的显示和隐藏
     if (showEmoji) {
       const container = emojiContainerRef.current;
       if (container) {
         if (!emojiPickerRef.current) {
-          emojiPickerRef.current = createEmojiPicker();
+          emojiPickerRef.current = document.createElement('emoji-picker');
+          emojiPickerRef.current.addEventListener('emoji-click', event => {
+            setNewMessage(prev => prev + event.detail.unicode);
+            setShowEmoji(false);
+          });
         }
         container.innerHTML = '';
         container.appendChild(emojiPickerRef.current);
@@ -38,7 +31,6 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
     }
   }, [showEmoji]);
 
-  // 点击其他地方关闭emoji选择器
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showEmoji && 
@@ -52,7 +44,6 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showEmoji]);
 
-  // 组件卸载时清理
   useEffect(() => {
     return () => {
       if (emojiPickerRef.current) {
@@ -61,6 +52,37 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
       }
     };
   }, []);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('上传失败');
+
+      const data = await response.json();
+      socket.emit('message', {
+        type: 'file',
+        content: data.url,
+        fileName: data.originalName
+      });
+    } catch (error) {
+      console.error('文件上传错误:', error);
+      alert('文件上传失败，请重试');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const sendMessage = (e) => {
     e.preventDefault();
@@ -73,45 +95,20 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
     }
   };
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    setIsUploading(true);
-
-    try {
-      const response = await fetch('/upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await response.json();
-      
-      socket.emit('message', {
-        type: 'file',
-        content: data.url,
-        fileName: data.originalName
-      });
-    } catch (error) {
-      console.error('File upload failed:', error);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   return (
     <div className="h-screen flex bg-gray-100 dark:bg-gray-900">
-      {/* 左侧个人信息和用户列表 */}
+      {/* 左侧用户列表 */}
       <div className="w-[280px] flex flex-col bg-gray-800 dark:bg-gray-900 text-white">
         {/* 个人信息 */}
         <div className="p-4 border-b border-gray-700/50">
           <div className="flex items-center gap-3">
-            <img
-              src={currentUser?.avatar}
-              alt={currentUser?.nickname}
-              className="w-10 h-10 rounded-full border-2 border-gray-600"
-            />
+            <div className="w-10 h-10 rounded-full border-2 border-gray-600 overflow-hidden">
+              <img
+                src={currentUser?.avatar}
+                alt={currentUser?.nickname}
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div className="flex-1">
               <div className="font-medium">{currentUser?.nickname}</div>
               <div className="text-xs text-gray-400">在线</div>
@@ -127,20 +124,6 @@ export function ChatRoom({ messages, users, currentUser, socket, onLogout }) {
                 </svg>
               </button>
             </div>
-          </div>
-        </div>
-        
-        {/* 搜索框 */}
-        <div className="p-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="搜索"
-              className="w-full bg-gray-700/50 text-white placeholder-gray-400 rounded-md px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
           </div>
         </div>
 

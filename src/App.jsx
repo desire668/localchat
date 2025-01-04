@@ -1,94 +1,109 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { UserSetup } from './components/UserSetup';
 import { ChatRoom } from './components/ChatRoom';
-import { generateRandomAvatar } from './utils/avatarUtils';
 
-// 将 socket 移到组件外部，确保只创建一次连接
-const socket = io({
+// Socket.IO 客户端配置
+const socket = io('http://localhost:3000', {
   reconnection: true,
   reconnectionAttempts: 5,
-  reconnectionDelay: 1000
+  reconnectionDelay: 1000,
+  transports: ['websocket', 'polling'],
+  withCredentials: false,
+  autoConnect: true,
+  forceNew: true
 });
 
 export default function App() {
-  const [isSetup, setIsSetup] = useState(() => {
-    return localStorage.getItem('chatUserInfo') !== null;
-  });
-  const [messages, setMessages] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [users, setUsers] = useState([]);
-  const [currentUser, setCurrentUser] = useState(() => {
-    const savedUser = localStorage.getItem('chatUserInfo');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [messages, setMessages] = useState([]);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    // 如果有保存的用户信息，自动重新连接
-    if (currentUser) {
-      socket.emit('setUserInfo', currentUser);
-    }
+    // 连接事件处理
+    socket.on('connect', () => {
+      console.log('已连接到服务器');
+      setConnected(true);
+      
+      // 如果有用户信息，重新发送
+      if (currentUser) {
+        socket.emit('setUserInfo', currentUser);
+      }
+    });
 
-    function handleMessage(message) {
-      setMessages(prev => [...prev, message]);
-    }
+    // 断开连接事件处理
+    socket.on('disconnect', () => {
+      console.log('与服务器断开连接');
+      setConnected(false);
+    });
 
-    function handleUserList(userList) {
+    // 连接确认
+    socket.on('connected', (data) => {
+      console.log('连接已确认:', data);
+    });
+
+    // 心跳检测响应
+    socket.on('ping', () => {
+      socket.emit('pong');
+    });
+
+    // 用户列表更新
+    socket.on('userList', (userList) => {
+      console.log('用户列表更新:', userList);
       setUsers(userList);
-    }
+    });
 
-    function handleUserJoined(user) {
-      setMessages(prev => [...prev, {
-        type: 'system',
-        content: `${user.nickname} 加入了聊天室`,
-        timestamp: new Date().toISOString()
-      }]);
-    }
+    // 消息处理
+    socket.on('message', (message) => {
+      console.log('收到消息:', message);
+      setMessages(prev => [...prev, message]);
+    });
 
-    function handleUserLeft(user) {
-      setMessages(prev => [...prev, {
-        type: 'system',
-        content: `${user.nickname} 离开了聊天室`,
-        timestamp: new Date().toISOString()
-      }]);
-    }
+    // 错误处理
+    socket.on('error', (error) => {
+      console.error('Socket错误:', error);
+    });
 
-    // 注册事件监听
-    socket.on('message', handleMessage);
-    socket.on('userList', handleUserList);
-    socket.on('userJoined', handleUserJoined);
-    socket.on('userLeft', handleUserLeft);
+    // 连接错误处理
+    socket.on('connect_error', (error) => {
+      console.error('连接错误:', error);
+    });
 
     // 清理函数
     return () => {
-      socket.off('message', handleMessage);
-      socket.off('userList', handleUserList);
-      socket.off('userJoined', handleUserJoined);
-      socket.off('userLeft', handleUserLeft);
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connected');
+      socket.off('ping');
+      socket.off('userList');
+      socket.off('message');
+      socket.off('error');
+      socket.off('connect_error');
     };
   }, [currentUser]);
 
   const handleUserSetup = (userInfo) => {
-    const user = {
-      ...userInfo,
-      avatar: userInfo.avatar || generateRandomAvatar()
-    };
-    localStorage.setItem('chatUserInfo', JSON.stringify(user));
-    setCurrentUser(user);
-    socket.emit('setUserInfo', user);
-    setIsSetup(true);
+    console.log('设置用户信息:', userInfo);
+    setCurrentUser(userInfo);
+    
+    if (connected) {
+      socket.emit('setUserInfo', userInfo);
+    }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('chatUserInfo');
-    setCurrentUser(null);
-    setIsSetup(false);
+    console.log('用户登出');
     socket.disconnect();
-    socket.connect();
+    setCurrentUser(null);
+    setUsers([]);
+    setMessages([]);
+    setConnected(false);
   };
 
   return (
-    <div className="h-screen bg-gray-100">
-      {!isSetup ? (
+    <div className="h-screen bg-gray-100 dark:bg-gray-900">
+      {!currentUser ? (
         <UserSetup onSubmit={handleUserSetup} />
       ) : (
         <ChatRoom

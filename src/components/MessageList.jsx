@@ -18,6 +18,14 @@ export function MessageList({ messages, currentUser }) {
     });
   };
 
+  const decodeNickname = (nickname) => {
+    try {
+      return decodeURIComponent(nickname);
+    } catch (e) {
+      return nickname;
+    }
+  };
+
   const isImageFile = (fileName) => {
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
     return imageExtensions.some(ext => 
@@ -63,6 +71,28 @@ export function MessageList({ messages, currentUser }) {
     );
   };
 
+  const renderAvatar = (user, isCurrentUser) => {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+          {decodeNickname(user?.nickname)}
+        </div>
+        <div className="w-8 h-8 rounded-full border-2 border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-hidden">
+          <img
+            src={user?.avatar}
+            alt={decodeNickname(user?.nickname)}
+            className="w-full h-full object-cover"
+            style={{ imageRendering: 'auto' }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.nickname || 'fallback'}`;
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/50">
       {messages.map((message, index) => {
@@ -84,15 +114,8 @@ export function MessageList({ messages, currentUser }) {
             className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
           >
             <div className={`flex ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'} items-end max-w-[70%] group`}>
-              <img
-                src={message.user?.avatar}
-                alt="avatar"
-                className="w-8 h-8 rounded-full flex-shrink-0 border-2 border-gray-200 dark:border-gray-700"
-              />
+              {renderAvatar(message.user, isCurrentUser)}
               <div className={`mx-2 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                <div className={`text-xs text-gray-500 dark:text-gray-400 mb-1 ${isCurrentUser ? 'text-right' : 'text-left'}`}>
-                  {message.user?.nickname}
-                </div>
                 <div className={`p-3 rounded-2xl ${
                   isCurrentUser 
                     ? 'bg-blue-500 text-white rounded-br-none' 

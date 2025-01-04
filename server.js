@@ -7,7 +7,19 @@ const fs = require('fs').promises;
 
 const app = express();
 const server = createServer(app);
-const io = new Server(server);
+
+// 配置 Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["*"],
+    credentials: false
+  },
+  allowEIO3: true,
+  transports: ['websocket', 'polling'],
+  cookie: false
+});
 
 // 开发环境下，将请求代理到 Vite 开发服务器
 if (process.env.NODE_ENV === 'development') {
@@ -93,33 +105,106 @@ app.get('/files/list', async (req, res) => {
 app.use('/files', express.static('files'));
 app.use(fileUpload());
 
+// 用户管理
 const users = new Map();
 
+// 连接处理
 io.on('connection', (socket) => {
-  console.log('用户连接');
+  console.log('新用户连接:', socket.id);
 
+  // 设置用户信息
   socket.on('setUserInfo', (userInfo) => {
-    users.set(socket.id, userInfo);
-    io.emit('userList', Array.from(users.values()));
-    socket.broadcast.emit('userJoined', userInfo);
-  });
+    try {
+      console.log('设置用户信息:', socket.id, userInfo);
+      
+      // 存储用户信息
+      const user = {
+        id: socket.id,
+        ...userInfo,
+        lastActive: Date.now()
+      };
+      users.set(socket.id, user);
 
-  socket.on('message', (message) => {
-    const user = users.get(socket.id);
-    io.emit('message', {
-      ...message,
-      user,
-      timestamp: new Date().toISOString()
-    });
-  });
+      // 广播用户列表更新
+      const userList = Array.from(users.values());
+      console.log('当前用户列表:', userList);
+      io.emit('userList', userList);
 
-  socket.on('disconnect', () => {
-    const user = users.get(socket.id);
-    if (user) {
-      socket.broadcast.emit('userLeft', user);
-      users.delete(socket.id);
-      io.emit('userList', Array.from(users.values()));
+      // 发送系统消息
+      io.emit('message', {
+        type: 'system',
+        content: `${userInfo.nickname} 加入了聊天室`,
+        timestamp: new Date().toISOString()
+      });
+
+      // 发送连接确认
+      socket.emit('connected', { id: socket.id });
+    } catch (error) {
+      console.error('设置用户信息错误:', error);
     }
+  });
+
+  // 消息处理
+  socket.on('message', (message) => {
+    try {
+      const user = users.get(socket.id);
+      if (user) {
+        user.lastActive = Date.now();
+        console.log('收到消息:', socket.id, message);
+        io.emit('message', {
+          ...message,
+          user: {
+            id: user.id,
+            nickname: user.nickname,
+            avatar: user.avatar
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('发送消息错误:', error);
+    }
+  });
+
+  // 心跳检测
+  socket.on('ping', () => {
+    try {
+      const user = users.get(socket.id);
+      if (user) {
+        user.lastActive = Date.now();
+        socket.emit('pong');
+      }
+    } catch (error) {
+      console.error('心跳检测错误:', error);
+    }
+  });
+
+  // 断开连接处理
+  socket.on('disconnect', () => {
+    try {
+      const user = users.get(socket.id);
+      if (user) {
+        console.log('用户断开连接:', socket.id, user.nickname);
+        
+        // 发送离开消息
+        io.emit('message', {
+          type: 'system',
+          content: `${user.nickname} 离开了聊天室`,
+          timestamp: new Date().toISOString()
+        });
+
+        // 删除用户并更新列表
+        users.delete(socket.id);
+        io.emit('userList', Array.from(users.values()));
+      }
+    } catch (error) {
+      console.error('断开连接错误:', error);
+    }
+  });
+
+  // 错误处理
+  socket.on('error', (error) => {
+    console.error('Socket错误:', error);
   });
 });
 
@@ -148,5 +233,5 @@ app.post('/upload', async (req, res) => {
 
 const PORT = 3000;
 server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`服务器运行在 http://localhost:${PORT}`);
 });
